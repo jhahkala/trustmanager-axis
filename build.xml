@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+Copyright (c) Members of the EGEE Collaboration. 2004. 
+See http://www.eu-egee.org/partners/ for details on the copyright
+holders.  
+
+Licensed under the Apache License, Version 2.0 (the "License"); 
+you may not use this file except in compliance with the License. 
+You may obtain a copy of the License at 
+
+    http://www.apache.org/licenses/LICENSE-2.0 
+
+Unless required by applicable law or agreed to in writing, software 
+distributed under the License is distributed on an "AS IS" BASIS, 
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+See the License for the specific language governing permissions and 
+limitations under the License.
+	
+	Authors: Joachim Flammer <Joachim.Flammer@Cern.ch>
+                 Joni Hahkala <joni.hahkala@cern.ch>	
+
+-->
+
+<project name="trustmanager-axis" default="dist">
+
+	<property name="jdk.target.version.force" value="1.5" />
+
+	<property name="workspace.dir" value=".." />
+	<property name="project-name" value="trustmanager-axis" />
+	<property name="jar.name" value="${project-name}" />
+
+	<property name="stage" value="${workspace.dir}/stage" />
+	<property name="java.share.path" value="/usr/share/java" />
+	<property name="stage.java.share.path" value="${stage}${java.share.path}" />
+	
+	<property name="prefix" value="tmp-prefix" />
+	<property name="package.prefix" value="${prefix}" />
+	<property name="package.java.share.path" value="${package.prefix}/usr/share/java" />
+	<property name="package.javadoc.path" value="${package.prefix}/usr/share/doc/${project-name}/html" />
+	<property name="package.doc.path" value="${package.prefix}/usr/share/doc/${project-name}" />
+
+	<!-- set the default locations, setting these during call to ant will override these -->
+    <property name="log4j.location" value="${java.share.path}"/>
+    <property name="bouncycastle.location" value="${java.share.path}"/>
+    <property name="junit.location" value="${java.share.path}"/>
+    <property name="tomcat.location" value="${java.share.path}"/>
+    <property name="axis.location" value="${java.share.path}"/>
+
+	<property name="trustmanager.location" value="${stage.java.share.path}"/>
+	<property name="build.dir" value="build"/>
+
+	<target name="init" description="Module specific initialization tasks">
+
+        <echo message="log4j.location              	=${log4j.location}"/>
+        <echo message="bouncycastle.location        =${bouncycastle.location}"/>
+        <echo message="junit.location           	=${junit.location}"/>
+        <echo message="tomcat.location              =${tomcat.location}"/>
+        <echo message="axis.location         		=${axis.location}"/>
+        <echo message="trustmanager.location        =${trustmanager.location}"/>
+        <echo message="stage        				=${stage}"/>
+        <echo message="stage.java.share.path        =${stage.java.share.path}"/>
+ 
+        <echo message="System java share dir ${java.share.path}:"/>
+    	<exec executable="ls" failifexecutionfails="false" failonerror="false">
+    		<arg value="-al"/>
+    		<arg value="${java.share.path}"/>
+    	</exec>
+
+        <echo message="stage java share dir ${stage.java.share.path}:"/>
+    	<exec executable="ls" failifexecutionfails="false" failonerror="false">
+    		<arg value="-al"/>
+    		<arg value="${stage.java.share.path}"/>
+    	</exec>
+
+		<!-- Set compile classpaths -->
+		<path id="compile.classpath">
+
+			<fileset dir="${log4j.location}">
+				<include name="**/log4j*.jar" />
+			</fileset>
+			<fileset dir="${bouncycastle.location}">
+				<include name="**/bcprov*.jar" />
+			</fileset>
+			<fileset dir="${tomcat.location}">
+				<include name="**/servlet*.jar" />
+			</fileset>
+			<fileset dir="${axis.location}">
+				<include name="**/axis*.jar" />
+			</fileset>
+			<pathelement location="${trustmanager.location}/trustmanager.jar" />
+		</path>
+		<path id="test.classpath">
+
+			<!-- compile classpath -->
+			<path refid="compile.classpath" />
+			<fileset dir="${junit.location}">
+				<include name="**/junit*.jar" />
+			</fileset>
+
+		</path>
+	</target>
+
+	<target name="compile" depends="init">
+		<mkdir dir="build.dir" />
+		<javac srcdir="src" destdir="build.dir" deprecation="false" failonerror="true" debug="true" target="${jdk.target.version.force}">
+			<classpath refid="compile.classpath" />
+		</javac>
+
+		<copy todir="build.dir">
+			<fileset dir="src">
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+
+		<mkdir dir="lib" />
+		<jar destfile="lib/${jar.name}.jar" basedir="build.dir" includes="**/*.class,**/*.properties" index="true">
+			<manifest>	
+				<attribute name="Package-Title" value="${project-name}"/>
+				<attribute name="Package-Version" value="${module.version}"/>
+				<attribute name="Package-Vendor" value="EMI"/>
+				<attribute name="build" value="${build.time}"/>
+				<attribute name="build-by" value="${user.name}"/>
+				<attribute name="build-OS" value="${os.name}"/>
+	<!--    			<attribute name="build host" value="${buildhost.NAME}.${buildhost.DOMAIN}"/>
+	-->				
+			</manifest>
+		</jar>
+
+	</target>
+	
+	<target name="compile-extcp">
+
+		<mkdir dir="build.dir" />
+		<javac srcdir="src" destdir="build.dir" deprecation="false" failonerror="true" debug="true" target="${jdk.target.version.force}">
+		</javac>
+
+		<copy todir="build.dir">
+			<fileset dir="src">
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+
+		<mkdir dir="lib" />
+		<jar destfile="lib/${jar.name}.jar" basedir="build.dir" includes="**/*.class,**/*.properties" index="true"/>
+
+	</target>
+
+	<target name="clean">
+		<delete dir="${package.prefix}" />
+		<delete dir="build.dir" />
+		<delete dir="lib" />
+	</target>
+	
+	<target name="doc" description="Build Javadoc">
+
+		<mkdir dir="${package.javadoc.path}" />
+
+		<javadoc packagenames="org.glite.security.*" classpathref="compile.classpath" sourcepath="src" destdir="${package.javadoc.path}" author="true" version="true" use="true" access="public" />
+
+		<copy todir="${package.doc.path}" file="LICENSE"/>
+
+		<copy todir="${package.doc.path}">
+			<fileset dir="doc">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="doc-extcp" description="Build Javadoc">
+
+		<mkdir dir="${package.javadoc.path}" />
+
+		<javadoc packagenames="org.glite.security.*" sourcepath="src" destdir="${package.javadoc.path}" author="true" version="true" use="true" access="public" />
+
+		<copy todir="${package.doc.path}" file="LICENSE"/>
+
+		<copy todir="${package.doc.path}">
+			<fileset dir="doc">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="dist" depends="compile, doc">
+		<mkdir dir="${package.java.share.path}" />
+		<copy todir="${package.java.share.path}">
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="stage" depends="dist">
+		<mkdir dir="${stage.java.share.path}"/>
+		<copy todir="${stage.java.share.path}">
+			<fileset dir="lib">
+				<include name="**/*.jar" />
+			</fileset>
+		</copy>
+	</target>
+
+</project>
